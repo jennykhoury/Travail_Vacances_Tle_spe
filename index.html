@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cahier de Vacances - Entrée en Terminale Spé Math</title>
+    <meta name="description" content="Un cahier de vacances interactif et de haut niveau pour réviser la spécialité mathématiques de Première et aborder sereinement la Terminale Spé Math. Cours, exercices corrigés et quiz interactifs.">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- FontAwesome for Premium Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- KaTeX for Perfect Mathematical Equations -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/contrib/auto-render.min.js"></script>
+    
+    <!-- Confetti Library for Successful Milestones -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="light-theme">
+
+    <!-- USER PROFILE MODAL (ONBOARDING) -->
+    <div id="onboarding-modal" class="modal-overlay active">
+        <div class="modal-card fade-in">
+            <div class="modal-icon">
+                <i class="fa-solid fa-graduation-cap"></i>
+            </div>
+            <h2>Bienvenue dans votre Cahier de Vacances</h2>
+            <p>Préparez sereinement votre entrée en <strong>Terminale Spécialité Mathématiques</strong>. Saisissez vos informations pour personnaliser votre espace et votre diplôme final.</p>
+            <form id="onboarding-form" onsubmit="saveProfile(event)">
+                <div class="form-group">
+                    <label for="student-firstname">Prénom</label>
+                    <input type="text" id="student-firstname" required placeholder="Ex: Lucas" autocomplete="given-name">
+                </div>
+                <div class="form-group">
+                    <label for="student-lastname">Nom</label>
+                    <input type="text" id="student-lastname" required placeholder="Ex: Martin" autocomplete="family-name">
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">Commencer les révisions</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MAIN APP STRUCTURE -->
+    <div class="app-container">
+        
+        <!-- SIDEBAR -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <i class="fa-solid fa-square-root-variable logo-icon"></i>
+                    <div class="logo-text">
+                        <span class="logo-title">Terminale</span>
+                        <span class="logo-subtitle">Spé Maths Prep</span>
+                    </div>
+                </div>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <ul>
+                    <li>
+                        <a href="#" id="nav-dashboard" class="nav-item active" onclick="switchView('dashboard')">
+                            <i class="fa-solid fa-chart-line nav-icon"></i>
+                            <span>Tableau de Bord</span>
+                        </a>
+                    </li>
+                    <li class="nav-section-title">Chapitres</li>
+                    
+                    <!-- Dynamic Menu Items will be injected/styled here, but we hardcode semantic layout -->
+                    <li>
+                        <a href="#" id="nav-ch-1" class="nav-item nav-chapter" onclick="switchView('chapter', 1)">
+                            <span class="chapter-number">01</span>
+                            <span class="chapter-name">Second Degré</span>
+                            <span class="chapter-status-icon"><i class="fa-regular fa-circle"></i></span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" id="nav-ch-2" class="nav-item nav-chapter" onclick="switchView('chapter', 2)">
+                            <span class="chapter-number">02</span>
+                            <span class="chapter-name">Dérivation & Variations</span>
+                            <span class="chapter-status-icon"><i class="fa-regular fa-circle"></i></span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" id="nav-ch-3" class="nav-item nav-chapter" onclick="switchView('chapter', 3)">
+                            <span class="chapter-number">03</span>
+                            <span class="chapter-name">Suites Numériques</span>
+                            <span class="chapter-status-icon"><i class="fa-regular fa-circle"></i></span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" id="nav-ch-4" class="nav-item nav-chapter" onclick="switchView('chapter', 4)">
+                            <span class="chapter-number">04</span>
+                            <span class="chapter-name">Fonction Exponentielle</span>
+                            <span class="chapter-status-icon"><i class="fa-regular fa-circle"></i></span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" id="nav-ch-5" class="nav-item nav-chapter" onclick="switchView('chapter', 5)">
+                            <span class="chapter-number">05</span>
+                            <span class="chapter-name">Produit Scalaire & Géom.</span>
+                            <span class="chapter-status-icon"><i class="fa-regular fa-circle"></i></span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" id="nav-ch-6" class="nav-item nav-chapter" onclick="switchView('chapter', 6)">
+                            <span class="chapter-number">06</span>
+                            <span class="chapter-name">Probabilités Cond.</span>
+                            <span class="chapter-status-icon"><i class="fa-regular fa-circle"></i></span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" id="nav-ch-7" class="nav-item nav-chapter" onclick="switchView('chapter', 7)">
+                            <span class="chapter-number">07</span>
+                            <span class="chapter-name">Variables Aléatoires</span>
+                            <span class="chapter-status-icon"><i class="fa-regular fa-circle"></i></span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" id="nav-ch-8" class="nav-item nav-chapter" onclick="switchView('chapter', 8)">
+                            <span class="chapter-number">08</span>
+                            <span class="chapter-name">Trigonométrie</span>
+                            <span class="chapter-status-icon"><i class="fa-regular fa-circle"></i></span>
+                        </a>
+                    </li>
+                    
+                    <li class="nav-section-title">Certification</li>
+                    <li>
+                        <a href="#" id="nav-global" class="nav-item" onclick="switchView('global')">
+                            <i class="fa-solid fa-award nav-icon"></i>
+                            <span>Évaluation Globale</span>
+                            <span id="final-badge" class="badge badge-locked"><i class="fa-solid fa-lock"></i></span>
+                        </a>
+                    </li>
+                    
+                    <li class="nav-section-title">Ressources</li>
+                    <li>
+                        <a href="#" id="nav-revision" class="nav-item" onclick="switchView('revision')">
+                            <i class="fa-solid fa-file-pdf nav-icon"></i>
+                            <span>Révision Générale</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+            
+            <div class="sidebar-footer">
+                <div class="user-profile-widget">
+                    <div class="user-avatar">
+                        <i class="fa-solid fa-user-graduate"></i>
+                    </div>
+                    <div class="user-info">
+                        <span id="user-display-name" class="user-name">Élève</span>
+                        <span class="user-role">Spé Mathématiques</span>
+                    </div>
+                    <button class="btn-icon" onclick="resetProfile()" title="Réinitialiser le profil">
+                        <i class="fa-solid fa-right-from-bracket"></i>
+                    </button>
+                </div>
+            </div>
+        </aside>
+        
+        <!-- MAIN CONTENT AREA -->
+        <main class="main-content">
+            
+            <!-- HEADER -->
+            <header class="app-header">
+                <div class="header-left">
+                    <h1 id="page-title">Tableau de Bord</h1>
+                    <p id="page-subtitle" class="header-date">Préparez votre réussite en mathématiques pour le baccalauréat</p>
+                </div>
+                <div class="header-right">
+                    <!-- Theme Toggle Switch -->
+                    <button id="theme-toggle" class="btn-theme-toggle" onclick="toggleTheme()" aria-label="Changer de thème">
+                        <i class="fa-solid fa-moon"></i>
+                    </button>
+                    <!-- Help Info Button -->
+                    <button class="btn-icon" onclick="showHelp()" title="Aide & Fonctionnement">
+                        <i class="fa-solid fa-circle-question"></i>
+                    </button>
+                </div>
+            </header>
+            
+            <!-- VIEW CONTAINER -->
+            <div class="view-content">
+                
+                <!-- 1. DASHBOARD VIEW -->
+                <section id="view-dashboard" class="content-section active">
+                    
+                    <!-- WELCOME CARD -->
+                    <div class="welcome-banner">
+                        <div class="banner-content">
+                            <h2>Bonjour, <span id="welcome-name">Élève</span> ! 👋</h2>
+                            <p>Bienvenue dans votre programme de révision intensif et interactif. Réparti sur 8 chapitres cruciaux, ce cahier vous permet de consolider vos bases et d'assimiler les méthodes clés de Première. Prêt à briller en Terminale ?</p>
+                            <div class="banner-badges">
+                                <span class="badge-item"><i class="fa-solid fa-clock"></i> Révision flexible</span>
+                                <span class="badge-item"><i class="fa-solid fa-chart-pie"></i> Suivi analytique</span>
+                                <span class="badge-item"><i class="fa-solid fa-signature"></i> Diplôme final</span>
+                            </div>
+                        </div>
+                        <div class="banner-graphic">
+                            <i class="fa-solid fa-calculator"></i>
+                        </div>
+                    </div>
+                    
+                    <!-- STATS GRID -->
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon icon-blue">
+                                <i class="fa-solid fa-circle-notch fa-spin-slow"></i>
+                            </div>
+                            <div class="stat-details">
+                                <span class="stat-value" id="stat-progress">0%</span>
+                                <span class="stat-label">Progression globale</span>
+                            </div>
+                            <div class="stat-progress-bar-container">
+                                <div class="stat-progress-bar" id="stat-progress-bar" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-card">
+                            <div class="stat-icon icon-green">
+                                <i class="fa-solid fa-book-open"></i>
+                            </div>
+                            <div class="stat-details">
+                                <span class="stat-value" id="stat-chapters-done">0 / 8</span>
+                                <span class="stat-label">Chapitres maîtrisés</span>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-card">
+                            <div class="stat-icon icon-yellow">
+                                <i class="fa-solid fa-star"></i>
+                            </div>
+                            <div class="stat-details">
+                                <span class="stat-value" id="stat-avg-score">-- / 20</span>
+                                <span class="stat-label">Moyenne des évaluations</span>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-card">
+                            <div class="stat-icon icon-purple">
+                                <i class="fa-solid fa-trophy"></i>
+                            </div>
+                            <div class="stat-details">
+                                <span class="stat-value" id="stat-badge-count">0 / 8</span>
+                                <span class="stat-label">Badges débloqués</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- CHAPTERS GRID -->
+                    <h3 class="section-title">Vos Modules de Révision</h3>
+                    <div class="chapters-grid" id="chapters-list-container">
+                        <!-- Dynamic Chapter Cards will be injected here by app.js -->
+                    </div>
+                    
+                    <!-- DIPLOMA PREVIEW SECTION -->
+                    <div class="diploma-teaser-card" id="diploma-teaser">
+                        <div class="teaser-text">
+                            <h3><i class="fa-solid fa-certificate"></i> Votre Passeport pour la Terminale Spé Math</h3>
+                            <p>Complétez l'ensemble des modules et passez l'évaluation finale pour générer et télécharger votre <strong>Diplôme de Réussite Spé Maths</strong> officiel.</p>
+                        </div>
+                        <button class="btn btn-secondary" onclick="switchView('global')">
+                            <i class="fa-solid fa-arrow-right"></i> Accéder à l'évaluation
+                        </button>
+                    </div>
+                    
+                </section>
+                
+                <!-- 2. CHAPTER VIEW (TEMPLATE FILLED DYNAMICALLY BY APP.JS) -->
+                <section id="view-chapter" class="content-section">
+                    
+                    <!-- Chapter Header Box -->
+                    <div class="chapter-header-box">
+                        <div class="chapter-header-info">
+                            <span class="chapter-tag" id="current-chapter-num">Chapitre 01</span>
+                            <h2 id="current-chapter-title">Titre du Chapitre</h2>
+                            <p id="current-chapter-desc">Description synthétique des objectifs du chapitre.</p>
+                        </div>
+                        <div class="chapter-header-progress">
+                            <div class="progress-circle-container">
+                                <svg class="progress-ring" width="80" height="80">
+                                    <circle class="progress-ring-circle-bg" stroke="#e2e8f0" stroke-width="6" fill="transparent" r="34" cx="40" cy="40"/>
+                                    <circle class="progress-ring-circle" id="chapter-progress-circle" stroke="var(--primary-color)" stroke-width="6" fill="transparent" r="34" cx="40" cy="40"/>
+                                </svg>
+                                <div class="progress-circle-text" id="chapter-progress-text">0%</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- TAB NAVIGATION -->
+                    <div class="tabs-container">
+                        <button class="tab-btn active" id="tab-cours" onclick="switchChapterTab('cours')">
+                            <i class="fa-solid fa-book-open"></i> Rappels de Cours & Widget
+                        </button>
+                        <button class="tab-btn" id="tab-exercices" onclick="switchChapterTab('exercices')">
+                            <i class="fa-solid fa-pen-clip"></i> Exercices Progressifs
+                        </button>
+                        <button class="tab-btn" id="tab-evaluation" onclick="switchChapterTab('evaluation')">
+                            <i class="fa-solid fa-circle-check"></i> Évaluation en ligne
+                        </button>
+                    </div>
+                    
+                    <!-- TAB CONTENT -->
+                    <div class="tab-content-container">
+                        
+                        <!-- TAB 1: COURS & WIDGET -->
+                        <div id="chapter-tab-cours" class="tab-pane active">
+                            <div class="cours-grid">
+                                <!-- Mathematical Notes and Core Summary -->
+                                <div class="cours-text-panel shadow-sm">
+                                    <h3>Fiche de Révision & Méthodes</h3>
+                                    <div class="cours-html-content math-latex-render" id="cours-text-container">
+                                        <!-- Loaded dynamically -->
+                                    </div>
+                                </div>
+                                
+                                <!-- Interactive Math Widget -->
+                                <div class="cours-widget-panel shadow-sm">
+                                    <div class="widget-header">
+                                        <span class="widget-badge"><i class="fa-solid fa-circle-nodes"></i> Widget Interactif</span>
+                                        <h4>Laboratoire Graphique de Mathématiques</h4>
+                                    </div>
+                                    <div class="widget-container">
+                                        <div class="widget-viewport">
+                                            <canvas id="math-widget-canvas" width="450" height="320"></canvas>
+                                            <div id="math-widget-svg-container"></div>
+                                        </div>
+                                        <div class="widget-controls" id="widget-controls-container">
+                                            <!-- Dynamically injected sliders and custom parameters -->
+                                        </div>
+                                    </div>
+                                    <div class="widget-help-text">
+                                        <i class="fa-solid fa-info-circle"></i> <span id="widget-instructions">Faites glisser les curseurs ci-dessus pour observer l'effet graphique immédiat sur la courbe et les valeurs associées.</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Mark Course Completed -->
+                            <div class="section-footer-actions">
+                                <div class="info-alert">
+                                    <i class="fa-solid fa-circle-info"></i>
+                                    <span>Prenez le temps d'expérimenter avec le widget interactif avant de passer aux exercices.</span>
+                                </div>
+                                <button class="btn btn-primary" onclick="markCourseRead()">
+                                    <i class="fa-solid fa-check-double"></i> J'ai lu le cours, passer aux exercices
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- TAB 2: EXERCICES PROGRESSIFS -->
+                        <div id="chapter-tab-exercices" class="tab-pane">
+                            <div class="exercises-header">
+                                <h3>Entraînement Progressif</h3>
+                                <p>Résolvez les exercices dans l'ordre pour renforcer votre maîtrise. La validation d'un niveau débloque le suivant.</p>
+                            </div>
+                            
+                            <div class="exercises-progress-map">
+                                <button class="ex-map-btn active" id="ex-map-1" onclick="switchExerciseLevel(1)">
+                                    <span class="level-badge level-1">Niveau 1</span>
+                                    <span class="level-label">Application Directe</span>
+                                </button>
+                                <button class="ex-map-btn" id="ex-map-2" onclick="switchExerciseLevel(2)">
+                                    <span class="level-badge level-2">Niveau 2</span>
+                                    <span class="level-label">Entraînement</span>
+                                </button>
+                                <button class="ex-map-btn" id="ex-map-3" onclick="switchExerciseLevel(3)">
+                                    <span class="level-badge level-3">Niveau 3</span>
+                                    <span class="level-label">Problème BAC</span>
+                                </button>
+                            </div>
+                            
+                            <!-- Exercise Display Area -->
+                            <div class="exercise-card shadow-sm" id="active-exercise-container">
+                                <!-- Loaded dynamically via app.js -->
+                            </div>
+                        </div>
+                        
+                        <!-- TAB 3: QUIZ / EVALUATION -->
+                        <div id="chapter-tab-evaluation" class="tab-pane">
+                            <div class="quiz-panel shadow-sm">
+                                <div class="quiz-panel-header" id="quiz-header-container">
+                                    <h3><i class="fa-solid fa-clipboard-question"></i> Évaluation du Chapitre</h3>
+                                    <p>Ce mini-examen de 5 questions évalue vos acquis. Vous devez obtenir au moins <strong>3/5</strong> pour valider le chapitre et obtenir le badge !</p>
+                                </div>
+                                
+                                <div class="quiz-body" id="quiz-body-container">
+                                    <!-- Dynamic Quiz Engine injection -->
+                                    <div class="quiz-start-screen text-center">
+                                        <i class="fa-solid fa-graduation-cap quiz-start-icon text-primary"></i>
+                                        <h4>Prêt pour l'évaluation ?</h4>
+                                        <p>L'évaluation comporte 5 questions (QCM et questions de calcul). Elle n'est pas limitée dans le temps, réfléchissez bien avant de soumettre vos réponses.</p>
+                                        <button class="btn btn-primary btn-lg" onclick="startChapterQuiz()">Lancer l'évaluation</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                    </div>
+                </section>
+                
+                <!-- 3. GLOBAL EVALUATION VIEW -->
+                <section id="view-global" class="content-section">
+                    <div class="global-eval-container shadow-sm">
+                        
+                        <div id="global-intro-screen" class="active">
+                            <div class="global-header-visual">
+                                <i class="fa-solid fa-medal award-big-icon"></i>
+                                <h2>Évaluation Globale Spécialité Mathématiques</h2>
+                                <p>C'est l'étape finale ! Ce grand test de 12 questions couvre l'intégralité du programme révisé dans ce cahier de vacances. Il simule des questions fondamentales pour l'entrée en Terminale.</p>
+                            </div>
+                            
+                            <div class="global-requirements">
+                                <h3>Conditions de réussite :</h3>
+                                <div class="req-list">
+                                    <div class="req-item">
+                                        <span class="req-icon"><i class="fa-solid fa-circle-check"></i></span>
+                                        <span class="req-text"><strong>12 questions</strong> transversales (tous chapitres confondus).</span>
+                                    </div>
+                                    <div class="req-item">
+                                        <span class="req-icon"><i class="fa-solid fa-circle-check"></i></span>
+                                        <span class="req-text">Moyenne de <strong>10/20</strong> requise pour débloquer votre diplôme.</span>
+                                    </div>
+                                    <div class="req-item" id="req-chapters-status">
+                                        <span class="req-icon"><i class="fa-solid fa-triangle-exclamation"></i></span>
+                                        <span class="req-text">Il est recommandé de terminer d'abord les 8 chapitres pour maximiser vos chances de réussite.</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="text-center mt-4">
+                                <button class="btn btn-primary btn-lg" id="btn-start-global" onclick="startGlobalEvaluation()">Commencer l'examen final</button>
+                            </div>
+                        </div>
+                        
+                        <div id="global-quiz-screen" class="d-none">
+                            <div class="quiz-progress-header">
+                                <span class="q-progress-text">Question <strong id="global-q-current">1</strong> sur <strong id="global-q-total">12</strong></span>
+                                <div class="q-progress-bar-bg">
+                                    <div class="q-progress-bar-fill" id="global-progress-fill" style="width: 8.33%"></div>
+                                </div>
+                            </div>
+                            
+                            <div class="quiz-question-card" id="global-question-container">
+                                <!-- Dynamic Question Load -->
+                            </div>
+                            
+                            <div class="quiz-navigation-actions">
+                                <button class="btn btn-secondary" id="global-btn-prev" onclick="globalPrevQuestion()" disabled>
+                                    <i class="fa-solid fa-arrow-left"></i> Question précédente
+                                </button>
+                                <button class="btn btn-primary" id="global-btn-next" onclick="globalNextQuestion()">
+                                    Question suivante <i class="fa-solid fa-arrow-right"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- GLOBAL RESULTS SCREEN -->
+                        <div id="global-results-screen" class="d-none text-center">
+                            <div class="results-badge" id="global-status-icon">
+                                <i class="fa-solid fa-award"></i>
+                            </div>
+                            <h2 id="global-results-title">Félicitations, vous avez réussi !</h2>
+                            <p id="global-results-subtitle">Vous avez obtenu une note remarquable.</p>
+                            
+                            <div class="score-card-container">
+                                <div class="score-box">
+                                    <span class="score-number" id="global-final-score">15</span>
+                                    <span class="score-denominator">/ 20</span>
+                                </div>
+                                <div class="score-stats">
+                                    <div class="score-stat-item">
+                                        <span class="stat-label">Bonnes réponses</span>
+                                        <span class="stat-val text-success" id="global-correct-answers">9 / 12</span>
+                                    </div>
+                                    <div class="score-stat-item">
+                                        <span class="stat-label">Statut</span>
+                                        <span class="stat-val" id="global-success-status">Admis en Terminale Spé Math</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Skills Breakdown -->
+                            <div class="skills-breakdown shadow-sm">
+                                <h4>Analyse de vos compétences</h4>
+                                <div class="skills-grid" id="global-skills-grid">
+                                    <!-- Injected dynamically -->
+                                </div>
+                            </div>
+                            
+                            <!-- Certificate Button or Try Again -->
+                            <div class="results-actions">
+                                <button class="btn btn-primary btn-lg" id="btn-get-diploma" onclick="showDiploma()">
+                                    <i class="fa-solid fa-file-pdf"></i> Générer mon Diplôme
+                                </button>
+                                <button class="btn btn-secondary" onclick="restartGlobalEvaluation()">
+                                    <i class="fa-solid fa-rotate-left"></i> Repasser l'examen
+                                </button>
+                            </div>
+                        </div>
+                        
+                    </div>
+                </section>
+
+                <!-- 4. GENERAL REVISION VIEW -->
+                <section id="view-revision" class="content-section">
+                    <div class="global-eval-container shadow-sm" style="padding: 36px; border-radius: var(--border-radius-lg); background-color: var(--bg-card);">
+                        
+                        <div class="text-center" style="margin-bottom: 32px;">
+                            <div class="results-badge" style="background-color: var(--primary-light); color: var(--primary-color); display: inline-flex; width: 64px; height: 64px; border-radius: 50%; align-items: center; justify-content: center; font-size: 28px; margin-bottom: 16px;">
+                                <i class="fa-solid fa-file-pdf"></i>
+                            </div>
+                            <h2>Fiche de Révision Générale</h2>
+                            <p class="text-secondary" style="max-width: 600px; margin: 6px auto 0 auto; font-size: 14.5px;">Consultez et téléchargez la fiche de révision globale de Première Spé Math ainsi que son corrigé détaillé.</p>
+                        </div>
+                        
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; margin-bottom: 32px;">
+                            <!-- PDF Card -->
+                            <div class="chapter-card shadow-sm" style="min-height: auto; padding: 24px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; border-radius: var(--border-radius-md);">
+                                <i class="fa-solid fa-file-pdf text-error" style="font-size: 48px; color: var(--color-error);"></i>
+                                <h4 style="margin: 0; font-size: 16px;">Sujet d'Exercices de Révision</h4>
+                                <p style="margin: 0; font-size: 12.5px; line-height: 1.5;" class="text-secondary">Un recueil complet de tous les exercices de Première pour préparer l'entrée en Terminale.</p>
+                                <a href="Fiche_revision_generale.pdf" target="_blank" class="btn btn-primary" style="width: 100%; border-radius: var(--border-radius-sm);">
+                                    <i class="fa-solid fa-eye"></i> Ouvrir le PDF
+                                </a>
+                            </div>
+
+                            <!-- Correction Card -->
+                            <div class="chapter-card shadow-sm" style="min-height: auto; padding: 24px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; border-radius: var(--border-radius-md);">
+                                <i class="fa-solid fa-signature text-success" style="font-size: 48px; color: var(--color-success);"></i>
+                                <h4 style="margin: 0; font-size: 16px;">Corrigé de la Fiche</h4>
+                                <p style="margin: 0; font-size: 12.5px; line-height: 1.5;" class="text-secondary">Accédez à la correction détaillée de tous les exercices de la fiche de révision générale.</p>
+                                <button onclick="toggleCorrectionPDF()" class="btn btn-success" style="width: 100%; border-radius: var(--border-radius-sm);">
+                                    <i class="fa-solid fa-chalkboard-user"></i> Voir la Correction
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Correction Area (Collapsed by default) -->
+                        <div id="correction-pdf-container" class="d-none fade-in" style="margin-top: 24px; border-top: 1px solid var(--border-color); padding-top: 24px;">
+                            <h3 style="margin-bottom: 16px;                            <div class="cours-html-content math-latex-render" style="background-color: var(--bg-app); border: 1px solid var(--border-color); padding: 32px; border-radius: var(--border-radius-md); max-height: 700px; overflow-y: auto; font-size: 14px; line-height: 1.6;">
+                                
+                                <h4>Exercice 1 : Algèbre & Second Degré</h4>
+                                <p><strong>Énoncé :</strong> Soit le trinôme $P(x) = 2x^2 - 10x + 12$. Résoudre l'équation $P(x) = 0$ et étudier son signe.</p>
+                                <p><strong>Corrigé :</strong><br>
+                                1. On calcule le discriminant : $\Delta = b^2 - 4ac = (-10)^2 - 4 \times 2 \times 12 = 100 - 96 = 4$.<br>
+                                2. Comme $\Delta > 0$, l'équation admet deux racines réelles distinctes :<br>
+                                $$x_1 = \frac{-b - \sqrt{\Delta}}{2a} = \frac{10 - 2}{4} = 2 \quad \text{et} \quad x_2 = \frac{-b + \sqrt{\Delta}}{2a} = \frac{10 + 2}{4} = 3$$<br>
+                                3. Pour le signe, $a = 2 > 0$, donc $P(x)$ est strictement positif à l'extérieur des racines et strictement négatif entre les racines :<br>
+                                • $P(x) > 0$ pour $x \in ]-\infty ; 2[ \cup ]3 ; +\infty[$<br>
+                                • $P(x) < 0$ pour $x \in ]2 ; 3[$<br>
+                                • $P(x) = 0$ pour $x \in \{2 ; 3\}$</p>
+                                
+                                <hr style="margin: 24px 0; border: 0; border-top: 1px solid var(--border-color);">
+
+                                <h4>Exercice 2 : Dérivation & Variations</h4>
+                                <p><strong>Énoncé :</strong> Étudier les variations de la fonction $f(x) = x^3 - 3x^2 + 1$ sur $\mathbb{R}$. Déterminer l'équation de la tangente en $x = 1$.</p>
+                                <p><strong>Corrigé :</strong><br>
+                                1. La dérivée de $f$ est : $f'(x) = 3x^2 - 6x = 3x(x - 2)$.<br>
+                                2. Les racines de $f'(x)$ sont $x = 0$ et $x = 2$. Le signe de $f'(x)$ est celui de $a = 3 > 0$ à l'extérieur :<br>
+                                • $f'(x) > 0$ sur $]-\infty ; 0[ \cup ]2 ; +\infty[$ (la fonction $f$ y est strictement croissante).<br>
+                                • $f'(x) < 0$ sur $]0 ; 2[$ (la fonction $f$ y est strictement décroissante).<br>
+                                3. Équation de la tangente en $x = 1$ : $y = f'(1)(x - 1) + f(1)$.<br>
+                                • $f(1) = 1^3 - 3(1)^2 + 1 = -1$.<br>
+                                • $f'(1) = 3(1)^2 - 6(1) = -3$.<br>
+                                La tangente a pour équation : $y = -3(x - 1) - 1 = -3x + 2$.</p>
+
+                                <hr style="margin: 24px 0; border: 0; border-top: 1px solid var(--border-color);">
+
+                                <h4>Exercice 3 : Suites Numériques</h4>
+                                <p><strong>Énoncé :</strong> Soit la suite $(u_n)$ définie par $u_0 = 2$ et $u_{n+1} = 0.5 u_n + 3$. Déterminer sa limite.</p>
+                                <p><strong>Corrigé :</strong><br>
+                                1. C'est une suite arithmético-géométrique. On cherche la valeur de stabilisation $L$ (point fixe) :<br>
+                                $$L = 0.5L + 3 \iff 0.5L = 3 \iff L = 6$$<br>
+                                2. On introduit la suite auxiliaire $(v_n)$ définie par $v_n = u_n - L = u_n - 6$.<br>
+                                3. Montrons que $(v_n)$ est géométrique :<br>
+                                $$v_{n+1} = u_{n+1} - 6 = (0.5u_n + 3) - 6 = 0.5u_n - 3 = 0.5(u_n - 6) = 0.5v_n$$<br>
+                                Ainsi, $(v_n)$ est géométrique de raison $q = 0.5$ et de premier terme $v_0 = u_0 - 6 = -4$.<br>
+                                4. On en déduit : $v_n = v_0 \times q^n = -4 \times (0.5)^n$.<br>
+                                5. Ainsi, $u_n = v_n + 6 = -4 \times (0.5)^n + 6$.<br>
+                                Comme $-1 < 0.5 < 1$, $\lim_{n \to +\infty} (0.5)^n = 0$, donc :<br>
+                                $$\lim_{n \to +\infty} u_n = 6$$</p>
+
+                                <hr style="margin: 24px 0; border: 0; border-top: 1px solid var(--border-color);">
+
+                                <h4>Exercice 4 : Fonction Exponentielle</h4>
+                                <p><strong>Énoncé :</strong> Résoudre dans $\mathbb{R}$ l'inéquation $e^{2x} - 3e^x + 2 \ge 0$.</p>
+                                <p><strong>Corrigé :</strong><br>
+                                1. On effectue le changement de variable $X = e^x$ avec $X > 0$. L'inéquation devient :<br>
+                                $$X^2 - 3X + 2 \ge 0$$<br>
+                                2. On cherche les racines du trinôme $X^2 - 3X + 2$. Le discriminant est $\Delta = 9 - 8 = 1$. Les racines sont :<br>
+                                $$X_1 = \frac{3 - 1}{2} = 1 \quad \text{et} \quad X_2 = \frac{3 + 1}{2} = 2$$<br>
+                                3. Le trinôme est positif à l'extérieur des racines, soit pour $X \le 1$ ou $X \ge 2$.<br>
+                                4. On revient à la variable $x$ :<br>
+                                • $e^x \le 1 \iff x \le 0$ (car $1 = e^0$).<br>
+                                • $e^x \ge 2 \iff x \ge \ln(2)$.<br>
+                                L'ensemble des solutions de l'inéquation est : $S = ]-\infty ; 0] \cup [\ln(2) ; +\infty[$.</p>
+
+                                <hr style="margin: 24px 0; border: 0; border-top: 1px solid var(--border-color);">
+
+                                <h4>Exercice 5 : Produit Scalaire & Géométrie</h4>
+                                <p><strong>Énoncé :</strong> Soit la droite $d$ passant par $A(1 ; 2)$ admettant le vecteur $\vec{n}(3 ; -1)$ comme vecteur normal. Déterminer une équation cartésienne de $d$.</p>
+                                <p><strong>Corrigé :</strong><br>
+                                1. Puisque $\vec{n}(3 ; -1)$ est normal à $d$, l'équation cartésienne de $d$ s'écrit sous la forme :<br>
+                                $$3x - y + c = 0$$<br>
+                                2. Le point $A(1 ; 2)$ appartient à $d$, ses coordonnées vérifient donc l'équation :<br>
+                                $$3(1) - (2) + c = 0 \iff 1 + c = 0 \iff c = -1$$<br>
+                                Une équation cartésienne de la droite $d$ est donc : $3x - y - 1 = 0$.</p>
+
+                                <hr style="margin: 24px 0; border: 0; border-top: 1px solid var(--border-color);">
+
+                                <h4>Exercice 6 : Probabilités Conditionnelles</h4>
+                                <p><strong>Énoncé :</strong> Dans un lot, 2% des pièces sont défectueuses. On passe un test automatique. Si la pièce est défectueuse, le test l'identifie comme telle dans 95% des cas. Si la pièce est saine, le test l'identifie comme saine dans 98% des cas (faux positifs de 2%). Quelle est la probabilité conditionnelle qu'une pièce soit défectueuse sachant que le test est positif ?</p>
+                                <p><strong>Corrigé :</strong><br>
+                                Soit $D$ l'événement "la pièce est défectueuse" et $T$ l'événement "le test est positif".<br>
+                                1. Données : $P(D) = 0.02$, $P(\bar{D}) = 0.98$, $P_D(T) = 0.95$ et $P_{\bar{D}}(\bar{T}) = 0.98 \Rightarrow P_{\bar{D}}(T) = 0.02$.<br>
+                                2. On cherche $P_T(D) = \frac{P(D \cap T)}{P(T)}$.<br>
+                                3. Calcul de $P(D \cap T) = P(D) \times P_D(T) = 0.02 \times 0.95 = 0.019$.<br>
+                                4. Calcul de $P(T)$ par la formule des probabilités totales :<br>
+                                $$P(T) = P(D \cap T) + P(\bar{D} \cap T) = 0.019 + P(\bar{D})P_{\bar{D}}(T) = 0.019 + 0.98 \times 0.02 = 0.019 + 0.0196 = 0.0386$$<br>
+                                5. Application de la formule de Bayes :<br>
+                                $$P_T(D) = \frac{0.019}{0.0386} \approx 0.4922 \quad (\text{soit environ } 49,22\%)$$</p>
+
+                                <hr style="margin: 24px 0; border: 0; border-top: 1px solid var(--border-color);">
+
+                                <h4>Exercice 7 : Variables Aléatoires</h4>
+                                <p><strong>Énoncé :</strong> On lance un dé équilibré. Si on obtient 6, on gagne 10 €. Si on obtient 5, on gagne 2 €. Sinon, on perd 3 €. Déterminer l'espérance mathématique de ce jeu.</p>
+                                <p><strong>Corrigé :</strong><br>
+                                Soit $X$ la variable aléatoire modélisant le gain net en euros.<br>
+                                1. Valeurs possibles de $X$ : $x_1 = 10$, $x_2 = 2$ et $x_3 = -3$.<br>
+                                2. Loi de probabilité de $X$ :<br>
+                                • $P(X = 10) = \frac{1}{6}$ (obtenir le chiffre 6)<br>
+                                • $P(X = 2) = \frac{1}{6}$ (obtenir le chiffre 5)<br>
+                                • $P(X = -3) = \frac{4}{6} = \frac{2}{3}$ (obtenir 1, 2, 3 ou 4)<br>
+                                3. Calcul de l'espérance mathématique $E(X)$ :<br>
+                                $$E(X) = 10 \times \frac{1}{6} + 2 \times \frac{1}{6} + (-3) \times \frac{4}{6} = \frac{10}{6} + \frac{2}{6} - \frac{12}{6} = 0 \text{ €}$$<br>
+                                L'espérance étant nulle, le jeu est parfaitement **équitable**.</p>
+
+                                <hr style="margin: 24px 0; border: 0; border-top: 1px solid var(--border-color);">
+
+                                <h4>Exercice 8 : Trigonométrie</h4>
+                                <p><strong>Énoncé :</strong> Résoudre dans $]-\pi ; \pi]$ l'équation $\sin(x) = -\frac{\sqrt{3}}{2}$.</p>
+                                <p><strong>Corrigé :</strong><br>
+                                1. On sait d'après le cours que $\sin(-\frac{\pi}{3}) = -\frac{\sqrt{3}}{2}$.<br>
+                                2. L'équation s'écrit $\sin(x) = \sin(-\frac{\pi}{3})$. Dans $]-\pi ; \pi]$, les solutions d'une telle équation sont de la forme :<br>
+                                • $x_1 = -\frac{\pi}{3}$<br>
+                                • $x_2 = \pi - (-\frac{\pi}{3}) = \pi + \frac{\pi}{3} = \frac{4\pi}{3}$.<br>
+                                Cependant, $\frac{4\pi}{3}$ n'appartient pas à l'intervalle d'étude $]-\pi ; \pi]$. On cherche sa mesure principale congruente :<br>
+                                $$x_2 = \frac{4\pi}{3} - 2\pi = -\frac{2\pi}{3}$$<br>
+                                L'ensemble des solutions de l'équation dans $]-\pi ; \pi]$ est : $S = \{-\frac{2\pi}{3} ; -\frac{\pi}{3}\}$.</p>
+                            </div>
+                        </div>
+
+                    </div>
+                </section>
+                
+            </div>
+                
+            </div>
+            
+            <!-- APP FOOTER -->
+            <footer class="app-footer">
+                <p>&copy; 2026 - Prep Spé Maths Terminale | Conçu académiquement pour l'excellence au Baccalauréat.</p>
+                <div class="footer-links">
+                    <a href="#" onclick="showHelp()">Aide</a>
+                    <a href="#" onclick="resetProfile()">Réinitialiser tout</a>
+                </div>
+            </footer>
+        </main>
+    </div>
+
+    <!-- DIPLOMA MODAL -->
+    <div id="diploma-modal" class="modal-overlay">
+        <div class="modal-card modal-lg fade-in">
+            <button class="modal-close" onclick="closeDiplomaModal()"><i class="fa-solid fa-xmark"></i></button>
+            <div class="modal-header-accent">
+                <i class="fa-solid fa-graduation-cap"></i>
+                <h3>Votre Diplôme Officiel de Réussite</h3>
+            </div>
+            <div class="diploma-preview-container">
+                <canvas id="diploma-canvas" width="800" height="560"></canvas>
+            </div>
+            <div class="modal-actions-bar">
+                <button class="btn btn-primary" onclick="downloadDiploma()">
+                    <i class="fa-solid fa-download"></i> Télécharger en Image (PNG)
+                </button>
+                <button class="btn btn-secondary" onclick="printDiploma()">
+                    <i class="fa-solid fa-print"></i> Imprimer mon diplôme
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN HELP MODAL -->
+    <div id="help-modal" class="modal-overlay">
+        <div class="modal-card fade-in">
+            <button class="modal-close" onclick="closeHelpModal()"><i class="fa-solid fa-xmark"></i></button>
+            <div class="modal-icon text-primary">
+                <i class="fa-solid fa-circle-question"></i>
+            </div>
+            <h2>Guide d'utilisation</h2>
+            <div class="help-content text-left">
+                <p>Bienvenue dans votre Cahier de Vacances interactif. Voici comment travailler efficacement :</p>
+                <ol>
+                    <li><strong>Tableau de Bord</strong> : Suivez votre progression globale, vos chapitres validés et vos badges.</li>
+                    <li><strong>Rappels de cours</strong> : Relisez les points essentiels et manipulez le <strong>Widget interactif</strong>. Il vous permet de visualiser et de vous approprier les notions clés de manière graphique et dynamique !</li>
+                    <li><strong>Exercices Progressifs</strong> : Résolvez les exercices dans l'ordre. Chaque niveau comprend <strong>3 exercices distincts</strong>. La validation des 3 exercices d'un niveau débloque le niveau suivant !</li>
+                    <li><strong>Évaluation du chapitre</strong> : Validez chaque chapitre en obtenant au moins 3/5 au quiz pour débloquer votre Badge de chapitre.</li>
+                    <li><strong>Évaluation globale</strong> : Testez vos connaissances transversales pour décrocher le <strong>Diplôme officiel de réussite</strong>.</li>
+                </ol>
+            </div>
+            <button class="btn btn-primary btn-block" onclick="closeHelpModal()">Compris !</button>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="math-data.js"></script>
+    <script src="widgets.js"></script>
+    <script src="quiz.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
