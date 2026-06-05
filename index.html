@@ -21,31 +21,82 @@
     
     <!-- Confetti Library for Successful Milestones -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    
+    <!-- Supabase JS Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <!-- Custom CSS -->
     <link rel="stylesheet" href="style.css">
 </head>
 <body class="light-theme">
 
-    <!-- USER PROFILE MODAL (ONBOARDING) -->
+    <!-- USER PROFILE MODAL (AUTHENTICATION & ONBOARDING) -->
     <div id="onboarding-modal" class="modal-overlay active">
-        <div class="modal-card fade-in">
+        <div class="modal-card fade-in" style="max-width: 450px;">
             <div class="modal-icon">
                 <i class="fa-solid fa-graduation-cap"></i>
             </div>
-            <h2>Bienvenue dans votre Cahier de Vacances</h2>
-            <p>Préparez sereinement votre entrée en <strong>Terminale Spécialité Mathématiques</strong>. Saisissez vos informations pour personnaliser votre espace et votre diplôme final.</p>
-            <form id="onboarding-form" onsubmit="saveProfile(event)">
+            <h2 id="auth-modal-title">Espace Cahier de Vacances</h2>
+            <p>Connectez-vous pour sauvegarder votre progression et y accéder depuis n'importe quel appareil.</p>
+            
+            <!-- Auth Tabs -->
+            <div class="auth-tabs" style="display: flex; gap: 8px; margin-bottom: 20px; border-bottom: 2px solid var(--border-color); padding-bottom: 8px;">
+                <button type="button" class="auth-tab-btn active" id="btn-tab-login" onclick="switchAuthTab('login')">Connexion</button>
+                <button type="button" class="auth-tab-btn" id="btn-tab-signup" onclick="switchAuthTab('signup')">Inscription</button>
+            </div>
+
+            <!-- Login Form -->
+            <form id="login-form" class="auth-form-pane active" onsubmit="handleLogin(event)">
                 <div class="form-group">
-                    <label for="student-firstname">Prénom</label>
-                    <input type="text" id="student-firstname" required placeholder="Ex: Lucas" autocomplete="given-name">
+                    <label for="login-email">Email</label>
+                    <input type="email" id="login-email" required placeholder="Ex: lucas@classe.fr" autocomplete="email">
                 </div>
                 <div class="form-group">
-                    <label for="student-lastname">Nom</label>
-                    <input type="text" id="student-lastname" required placeholder="Ex: Martin" autocomplete="family-name">
+                    <label for="login-password">Mot de passe</label>
+                    <input type="password" id="login-password" required placeholder="••••••••" autocomplete="current-password">
                 </div>
-                <button type="submit" class="btn btn-primary btn-block">Commencer les révisions</button>
+                <button type="submit" class="btn btn-primary btn-block" id="btn-login-submit">Se connecter</button>
             </form>
+
+            <!-- Signup Form -->
+            <form id="signup-form" class="auth-form-pane" onsubmit="handleSignup(event)">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group">
+                        <label for="signup-firstname">Prénom</label>
+                        <input type="text" id="signup-firstname" required placeholder="Ex: Lucas" autocomplete="given-name">
+                    </div>
+                    <div class="form-group">
+                        <label for="signup-lastname">Nom</label>
+                        <input type="text" id="signup-lastname" required placeholder="Ex: Martin" autocomplete="family-name">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="signup-email">Email</label>
+                    <input type="email" id="signup-email" required placeholder="Ex: lucas@classe.fr" autocomplete="email">
+                </div>
+                <div class="form-group">
+                    <label for="signup-password">Mot de passe</label>
+                    <input type="password" id="signup-password" required placeholder="Min. 6 caractères" autocomplete="new-password">
+                </div>
+                
+                <!-- Teacher selection -->
+                <div class="form-group-checkbox" style="margin-bottom: 12px;">
+                    <label style="display: flex; align-items: center; gap: 8px; font-size: 13.5px; cursor: pointer;">
+                        <input type="checkbox" id="signup-is-teacher" onchange="toggleTeacherCodeField(this)">
+                        <span>Je suis enseignant</span>
+                    </label>
+                </div>
+                
+                <div class="form-group d-none" id="teacher-code-group">
+                    <label for="signup-teacher-code">Code enseignant requis</label>
+                    <input type="password" id="signup-teacher-code" placeholder="Entrez le code enseignant secret">
+                </div>
+                
+                <button type="submit" class="btn btn-primary btn-block" id="btn-signup-submit">Créer mon compte</button>
+            </form>
+            
+            <!-- Auth Error/Status message -->
+            <div id="auth-feedback" class="auth-feedback-msg d-none" style="margin-top: 16px; padding: 10px; border-radius: var(--border-radius-sm); font-size: 13.5px; text-align: center;"></div>
         </div>
     </div>
 
@@ -148,6 +199,14 @@
                             <span>Révision Générale</span>
                         </a>
                     </li>
+                    
+                    <li class="nav-section-title d-none" id="teacher-nav-title">Enseignant</li>
+                    <li class="d-none" id="teacher-nav-item">
+                        <a href="#" id="nav-teacher" class="nav-item" onclick="switchView('teacher')">
+                            <i class="fa-solid fa-chalkboard-user nav-icon"></i>
+                            <span>Suivi de la Classe</span>
+                        </a>
+                    </li>
                 </ul>
             </nav>
             
@@ -157,10 +216,13 @@
                         <i class="fa-solid fa-user-graduate"></i>
                     </div>
                     <div class="user-info">
-                        <span id="user-display-name" class="user-name">Élève</span>
-                        <span class="user-role">Spé Mathématiques</span>
+                        <span style="display: flex; align-items: center; gap: 6px;">
+                            <span id="user-display-name" class="user-name">Élève</span>
+                            <i id="sync-status-icon" class="fa-solid fa-cloud-arrow-up text-success d-none" title="Synchronisé avec le cloud" style="font-size: 11px;"></i>
+                        </span>
+                        <span class="user-role" id="user-display-role">Spé Mathématiques</span>
                     </div>
-                    <button class="btn-icon" onclick="resetProfile()" title="Réinitialiser le profil">
+                    <button class="btn-icon" onclick="handleSignOut()" title="Se déconnecter (Sauvegarde cloud)">
                         <i class="fa-solid fa-right-from-bracket"></i>
                     </button>
                 </div>
@@ -662,7 +724,104 @@
                     </div>
                 </section>
                 
+                <!-- 5. TEACHER DASHBOARD VIEW -->
+                <section id="view-teacher" class="content-section">
+                    <div class="global-eval-container shadow-sm" style="padding: 36px; border-radius: var(--border-radius-lg); background-color: var(--bg-card);">
+                        
+                        <div class="teacher-dashboard-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 16px;">
+                            <div>
+                                <h2>Espace Enseignant - Suivi de la Classe</h2>
+                                <p class="text-secondary" style="margin: 4px 0 0 0; font-size: 14.5px;">Consultez en temps réel les progrès et résultats de vos élèves.</p>
+                            </div>
+                            <button class="btn btn-primary" onclick="refreshTeacherData()">
+                                <i class="fa-solid fa-rotate"></i> Actualiser les données
+                            </button>
+                        </div>
+
+                        <!-- Class summary stats -->
+                        <div class="stats-grid" style="margin-bottom: 32px;">
+                            <div class="stat-card">
+                                <div class="stat-icon icon-blue">
+                                    <i class="fa-solid fa-users"></i>
+                                </div>
+                                <div class="stat-details">
+                                    <span class="stat-value" id="teacher-stat-students-count">0</span>
+                                    <span class="stat-label">Élèves inscrits</span>
+                                </div>
+                            </div>
+                            
+                            <div class="stat-card">
+                                <div class="stat-icon icon-green">
+                                    <i class="fa-solid fa-chart-line"></i>
+                                </div>
+                                <div class="stat-details">
+                                    <span class="stat-value" id="teacher-stat-avg-progress">0%</span>
+                                    <span class="stat-label">Progression moyenne</span>
+                                </div>
+                            </div>
+                            
+                            <div class="stat-card">
+                                <div class="stat-icon icon-purple">
+                                    <i class="fa-solid fa-graduation-cap"></i>
+                                </div>
+                                <div class="stat-details">
+                                    <span class="stat-value" id="teacher-stat-avg-score">-- / 20</span>
+                                    <span class="stat-label">Moyenne générale</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Search/Filter input -->
+                        <div style="margin-bottom: 20px;">
+                            <div class="input-with-validation" style="max-width: 400px;">
+                                <input type="text" id="teacher-search" placeholder="Rechercher un élève (Nom, Prénom)..." oninput="filterStudentsTable()" style="padding: 10px 14px; width: 100%;">
+                            </div>
+                        </div>
+
+                        <!-- Students Table -->
+                        <div style="overflow-x: auto;">
+                            <table class="teacher-table" id="students-table" style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+                                <thead>
+                                    <tr style="border-bottom: 2px solid var(--border-color); text-align: left;">
+                                        <th onclick="sortStudentsTable('lastname')" style="padding: 12px; cursor: pointer; user-select: none;">Élève <i class="fa-solid fa-sort"></i></th>
+                                        <th onclick="sortStudentsTable('progress')" style="padding: 12px; cursor: pointer; user-select: none;">Progression Globale <i class="fa-solid fa-sort"></i></th>
+                                        <th onclick="sortStudentsTable('avg_quiz')" style="padding: 12px; cursor: pointer; user-select: none;">Quiz (Moyenne) <i class="fa-solid fa-sort"></i></th>
+                                        <th onclick="sortStudentsTable('global_score')" style="padding: 12px; cursor: pointer; user-select: none;">Évaluation Finale <i class="fa-solid fa-sort"></i></th>
+                                        <th onclick="sortStudentsTable('updated_at')" style="padding: 12px; cursor: pointer; user-select: none;">Dernière activité <i class="fa-solid fa-sort"></i></th>
+                                        <th style="padding: 12px;">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="teacher-students-tbody">
+                                    <!-- Injected dynamically -->
+                                    <tr>
+                                        <td colspan="6" style="text-align: center; padding: 30px; color: var(--color-text-muted);">
+                                            Chargement des données des élèves...
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+                
             </div>
+
+    <!-- STUDENT DETAILS MODAL FOR TEACHERS -->
+    <div id="student-detail-modal" class="modal-overlay">
+        <div class="modal-card fade-in" style="max-width: 700px; padding: 28px;">
+            <button class="modal-close" onclick="closeStudentDetailModal()"><i class="fa-solid fa-xmark"></i></button>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 16px;">
+                <div>
+                    <h3 id="detail-student-name" style="margin: 0;">Nom de l'élève</h3>
+                    <p id="detail-student-email" class="text-secondary" style="margin: 4px 0 0 0; font-size: 13px;">email@classe.fr</p>
+                </div>
+            </div>
+            
+            <div id="detail-student-content" style="max-height: 450px; overflow-y: auto;">
+                <!-- Dynamically injected student statistics and chapter detail list -->
+            </div>
+        </div>
+    </div>
                 
             </div>
             

@@ -1,13 +1,36 @@
 /**
  * CAHIER DE VACANCES - TERMINALE SPÉ MATHS
- * Contrôleur Principal de l'Application (Navigation, Profil, Stockage local, Exercices)
+ * Contrôleur Principal de l'Application (Navigation, Profil, Stockage local, Exercices, Synchronisation Cloud)
  */
+
+// SUPABASE CONFIGURATION
+const SUPABASE_URL = "https://llapoxnwtyshzorsmfaw.supabase.co/rest/v1/";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxsYXBveG53dHlzaHpvcnNtZmF3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NjQ3ODYsImV4cCI6MjA5NjI0MDc4Nn0.xzpPYCIgUWaCVK8daovtdWaA0D4RnEaINwINso4MW8s";
+const TEACHER_ACCESS_CODE = "jennykhoury";
+
+let supabase = null;
+let isSupabaseConfigured = false;
+
+if (typeof window.supabase !== 'undefined' && SUPABASE_URL !== "YOUR_SUPABASE_URL" && SUPABASE_ANON_KEY !== "YOUR_SUPABASE_ANON_KEY") {
+    try {
+        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        isSupabaseConfigured = true;
+        console.log("Supabase initialisé avec succès !");
+    } catch (e) {
+        console.error("Erreur d'initialisation de Supabase :", e);
+    }
+} else {
+    console.warn("Supabase n'est pas configuré. Utilisation du mode local hors ligne.");
+}
 
 // Global App State
 let studentProfile = {
     firstname: "",
     lastname: ""
 };
+
+let currentUser = null; // Supabase auth user object
+let currentUserRole = "student"; // "student" or "teacher"
 
 let currentChapterId = 1;
 let currentChapterTab = "cours";
@@ -20,7 +43,7 @@ let userProgress = {
     globalScore: null
 };
 
-// Initialize default progress for all 7 chapters
+// Initialize default progress for all 8 chapters
 function initDefaultProgress() {
     CHAPTERS_DATA.forEach(ch => {
         userProgress.chapters[ch.id] = {
@@ -38,59 +61,6 @@ function initDefaultProgress() {
    ========================================================================== */
 
 document.addEventListener("DOMContentLoaded", () => {
-    // Load profile
-    const savedFirstname = localStorage.getItem("maths_firstname");
-    const savedLastname = localStorage.getItem("maths_lastname");
-    
-    if (savedFirstname && savedLastname) {
-        studentProfile.firstname = savedFirstname;
-        studentProfile.lastname = savedLastname;
-        document.getElementById("onboarding-modal").classList.remove("active");
-        updateUserUI();
-    } else {
-        document.getElementById("onboarding-modal").classList.add("active");
-    }
-    
-    // Load or initialize progress
-    const savedProgress = localStorage.getItem("maths_student_progress");
-    if (savedProgress) {
-        try {
-            userProgress = JSON.parse(savedProgress);
-            
-            // Failsafe: Ensure all chapters and sub-exercises exist in loaded progress
-            CHAPTERS_DATA.forEach(ch => {
-                if (!userProgress.chapters[ch.id]) {
-                    userProgress.chapters[ch.id] = {
-                        read: false,
-                        ex1_1: false, ex1_2: false, ex1_3: false,
-                        ex2_1: false, ex2_2: false, ex2_3: false,
-                        ex3_1: false, ex3_2: false, ex3_3: false,
-                        quizScore: null
-                    };
-                } else {
-                    // Check sub-indices are defined
-                    const c = userProgress.chapters[ch.id];
-                    if (c.ex1_1 === undefined) {
-                        // Migrate old single ex progress if any
-                        c.ex1_1 = c.ex1 || false;
-                        c.ex1_2 = c.ex1 || false;
-                        c.ex1_3 = c.ex1 || false;
-                        c.ex2_1 = c.ex2 || false;
-                        c.ex2_2 = c.ex2 || false;
-                        c.ex2_3 = c.ex2 || false;
-                        c.ex3_1 = c.ex3 || false;
-                        c.ex3_2 = c.ex3 || false;
-                        c.ex3_3 = c.ex3 || false;
-                    }
-                }
-            });
-        } catch (e) {
-            initDefaultProgress();
-        }
-    } else {
-        initDefaultProgress();
-    }
-    
     // Load Theme Preference
     const savedTheme = localStorage.getItem("maths_theme") || "light";
     if (savedTheme === "dark") {
@@ -100,40 +70,410 @@ document.addEventListener("DOMContentLoaded", () => {
         document.body.className = "light-theme";
         document.getElementById("theme-toggle").innerHTML = '<i class="fa-solid fa-moon"></i>';
     }
-    
-    // Setup and render Dashboard
-    updateDashboardStats();
-    renderChaptersGrid();
-    
-    // Initial view is dashboard
-    switchView('dashboard');
+
+    if (isSupabaseConfigured) {
+        // Setup authentication listener
+        supabase.auth.onAuthStateChange(async (event, session) => {
+            console.log("Supabase Auth Event:", event);
+            await handleAuthStateChange(session);
+        });
+    } else {
+        // Fallback: Local offline mode
+        const savedFirstname = localStorage.getItem("maths_firstname");
+        const savedLastname = localStorage.getItem("maths_lastname");
+        
+        if (savedFirstname && savedLastname) {
+            studentProfile.firstname = savedFirstname;
+            studentProfile.lastname = savedLastname;
+            document.getElementById("onboarding-modal").classList.remove("active");
+            updateUserUI();
+        } else {
+            document.getElementById("onboarding-modal").classList.add("active");
+        }
+        
+        // Load offline progress
+        const savedProgress = localStorage.getItem("maths_student_progress");
+        if (savedProgress) {
+            try {
+                userProgress = JSON.parse(savedProgress);
+                migrateOldProgressData();
+            } catch (e) {
+                initDefaultProgress();
+            }
+        } else {
+            initDefaultProgress();
+        }
+        
+        // Setup and render Dashboard
+        updateDashboardStats();
+        renderChaptersGrid();
+        
+        // Initial view is dashboard
+        switchView('dashboard');
+    }
 });
 
-function saveProfile(event) {
-    event.preventDefault();
-    const firstname = document.getElementById("student-firstname").value.trim();
-    const lastname = document.getElementById("student-lastname").value.trim();
-    
-    if (!firstname || !lastname) return;
-    
-    studentProfile.firstname = firstname;
-    studentProfile.lastname = lastname;
-    
-    localStorage.setItem("maths_firstname", firstname);
-    localStorage.setItem("maths_lastname", lastname);
-    
-    // Fade out modal overlay
-    document.getElementById("onboarding-modal").classList.remove("active");
-    
-    updateUserUI();
-    triggerConfetti(30);
+function migrateOldProgressData() {
+    CHAPTERS_DATA.forEach(ch => {
+        if (!userProgress.chapters[ch.id]) {
+            userProgress.chapters[ch.id] = {
+                read: false,
+                ex1_1: false, ex1_2: false, ex1_3: false,
+                ex2_1: false, ex2_2: false, ex2_3: false,
+                ex3_1: false, ex3_2: false, ex3_3: false,
+                quizScore: null
+            };
+        } else {
+            const c = userProgress.chapters[ch.id];
+            if (c.ex1_1 === undefined) {
+                c.ex1_1 = c.ex1 || false;
+                c.ex1_2 = c.ex1 || false;
+                c.ex1_3 = c.ex1 || false;
+                c.ex2_1 = c.ex2 || false;
+                c.ex2_2 = c.ex2 || false;
+                c.ex2_3 = c.ex2 || false;
+                c.ex3_1 = c.ex3 || false;
+                c.ex3_2 = c.ex3 || false;
+                c.ex3_3 = c.ex3 || false;
+            }
+        }
+    });
 }
 
-function resetProfile() {
-    const confirmReset = confirm("Attention ! Vous allez réinitialiser votre profil ainsi que TOUTE votre progression dans ce cahier de vacances. Continuer ?");
+async function handleAuthStateChange(session) {
+    if (session) {
+        currentUser = session.user;
+        currentUserRole = currentUser.user_metadata.role || "student";
+        
+        studentProfile.firstname = currentUser.user_metadata.firstname || "Élève";
+        studentProfile.lastname = currentUser.user_metadata.lastname || "";
+        
+        localStorage.setItem("maths_firstname", studentProfile.firstname);
+        localStorage.setItem("maths_lastname", studentProfile.lastname);
+        
+        updateUserUI();
+        
+        // Cloud sync status UI
+        const cloudIcon = document.getElementById("sync-status-icon");
+        if (cloudIcon) {
+            cloudIcon.classList.remove("d-none");
+            cloudIcon.className = "fa-solid fa-cloud-arrow-up text-success";
+            cloudIcon.title = "Synchronisé avec le cloud";
+        }
+        
+        toggleTeacherNav(currentUserRole === "teacher");
+        
+        if (currentUserRole === "teacher") {
+            document.getElementById("onboarding-modal").classList.remove("active");
+            switchView('teacher');
+        } else {
+            await loadProgressFromCloud();
+            document.getElementById("onboarding-modal").classList.remove("active");
+            switchView('dashboard');
+        }
+    } else {
+        currentUser = null;
+        currentUserRole = "student";
+        studentProfile = { firstname: "", lastname: "" };
+        userProgress = { chapters: {}, globalScore: null };
+        initDefaultProgress();
+        
+        const cloudIcon = document.getElementById("sync-status-icon");
+        if (cloudIcon) cloudIcon.classList.add("d-none");
+        
+        toggleTeacherNav(false);
+        
+        // Clear forms
+        document.getElementById("login-form").reset();
+        document.getElementById("signup-form").reset();
+        document.getElementById("signup-is-teacher").checked = false;
+        document.getElementById("teacher-code-group").classList.add("d-none");
+        
+        document.getElementById("onboarding-modal").classList.add("active");
+    }
+}
+
+async function loadProgressFromCloud() {
+    if (!isSupabaseConfigured || !currentUser) return;
+    
+    try {
+        const cloudIcon = document.getElementById("sync-status-icon");
+        if (cloudIcon) {
+            cloudIcon.className = "fa-solid fa-arrows-rotate fa-spin text-warning";
+            cloudIcon.title = "Synchronisation...";
+        }
+        
+        const { data, error } = await supabase
+            .from('student_progress')
+            .select('*')
+            .eq('id', currentUser.id)
+            .single();
+            
+        if (error) {
+            if (error.code === 'PGRST116') { // Record not found
+                console.log("Aucune progression trouvée. Création initiale...");
+                initDefaultProgress();
+                await saveProgressToCloud();
+            } else {
+                throw error;
+            }
+        } else if (data) {
+            userProgress = data.progress;
+            if (data.global_score !== null && data.global_score !== undefined) {
+                userProgress.globalScore = data.global_score;
+                localStorage.setItem("maths_global_score", data.global_score.toString());
+            }
+            localStorage.setItem("maths_student_progress", JSON.stringify(userProgress));
+        }
+        
+        if (cloudIcon) {
+            cloudIcon.className = "fa-solid fa-cloud-arrow-up text-success";
+            cloudIcon.title = "Synchronisé avec le cloud";
+        }
+        
+        updateDashboardStats();
+        renderChaptersGrid();
+    } catch (e) {
+        console.error("Erreur de chargement cloud :", e);
+        const cloudIcon = document.getElementById("sync-status-icon");
+        if (cloudIcon) {
+            cloudIcon.className = "fa-solid fa-cloud-exclamation text-error";
+            cloudIcon.title = "Erreur de synchronisation";
+        }
+    }
+}
+
+async function saveProgressToCloud() {
+    if (!isSupabaseConfigured || !currentUser || currentUserRole === "teacher") return;
+    
+    try {
+        const cloudIcon = document.getElementById("sync-status-icon");
+        if (cloudIcon) {
+            cloudIcon.className = "fa-solid fa-arrows-rotate fa-spin text-warning";
+            cloudIcon.title = "Synchronisation...";
+        }
+        
+        const { error } = await supabase
+            .from('student_progress')
+            .upsert({
+                id: currentUser.id,
+                firstname: studentProfile.firstname,
+                lastname: studentProfile.lastname,
+                progress: userProgress,
+                global_score: userProgress.globalScore,
+                updated_at: new Date().toISOString()
+            });
+            
+        if (error) throw error;
+        
+        if (cloudIcon) {
+            cloudIcon.className = "fa-solid fa-cloud-arrow-up text-success";
+            cloudIcon.title = "Synchronisé avec le cloud";
+        }
+    } catch (e) {
+        console.error("Erreur de sauvegarde cloud :", e);
+        const cloudIcon = document.getElementById("sync-status-icon");
+        if (cloudIcon) {
+            cloudIcon.className = "fa-solid fa-cloud-exclamation text-error";
+            cloudIcon.title = "Erreur de synchronisation";
+        }
+    }
+}
+
+// Auth modal tabs
+function switchAuthTab(tabName) {
+    const title = document.getElementById("auth-modal-title");
+    const feedback = document.getElementById("auth-feedback");
+    
+    if (feedback) {
+        feedback.className = "auth-feedback-msg d-none";
+        feedback.innerText = "";
+    }
+    
+    document.querySelectorAll(".auth-tab-btn").forEach(btn => btn.classList.remove("active"));
+    document.querySelectorAll(".auth-form-pane").forEach(pane => pane.classList.remove("active"));
+    
+    if (tabName === 'login') {
+        document.getElementById("btn-tab-login").classList.add("active");
+        document.getElementById("login-form").classList.add("active");
+        title.innerText = "Se connecter";
+    } else {
+        document.getElementById("btn-tab-signup").classList.add("active");
+        document.getElementById("signup-form").classList.add("active");
+        title.innerText = "Créer un compte";
+    }
+}
+
+function toggleTeacherCodeField(checkbox) {
+    const group = document.getElementById("teacher-code-group");
+    const codeInput = document.getElementById("signup-teacher-code");
+    if (checkbox.checked) {
+        group.classList.remove("d-none");
+        codeInput.required = true;
+    } else {
+        group.classList.add("d-none");
+        codeInput.required = false;
+        codeInput.value = "";
+    }
+}
+
+function toggleTeacherNav(show) {
+    const title = document.getElementById("teacher-nav-title");
+    const item = document.getElementById("teacher-nav-item");
+    if (title && item) {
+        if (show) {
+            title.classList.remove("d-none");
+            item.classList.remove("d-none");
+        } else {
+            title.classList.add("d-none");
+            item.classList.add("d-none");
+        }
+    }
+}
+
+// Authentication Actions
+async function handleSignup(event) {
+    event.preventDefault();
+    const feedback = document.getElementById("auth-feedback");
+    const submitBtn = document.getElementById("btn-signup-submit");
+    
+    if (feedback) feedback.className = "auth-feedback-msg d-none";
+    
+    const firstname = document.getElementById("signup-firstname").value.trim();
+    const lastname = document.getElementById("signup-lastname").value.trim();
+    const email = document.getElementById("signup-email").value.trim();
+    const password = document.getElementById("signup-password").value;
+    const isTeacher = document.getElementById("signup-is-teacher").checked;
+    
+    let role = "student";
+    
+    if (isTeacher) {
+        const code = document.getElementById("signup-teacher-code").value.trim();
+        if (code !== TEACHER_ACCESS_CODE) {
+            showAuthFeedback("Code enseignant incorrect !", "error");
+            return;
+        }
+        role = "teacher";
+    }
+    
+    if (!isSupabaseConfigured) {
+        // Offline registration fallback
+        studentProfile.firstname = firstname;
+        studentProfile.lastname = lastname;
+        localStorage.setItem("maths_firstname", firstname);
+        localStorage.setItem("maths_lastname", lastname);
+        document.getElementById("onboarding-modal").classList.remove("active");
+        updateUserUI();
+        triggerConfetti(30);
+        return;
+    }
+    
+    try {
+        submitBtn.disabled = true;
+        submitBtn.innerText = "Création du compte...";
+        
+        const { data, error } = await supabase.auth.signUp({
+            email,
+            password,
+            options: {
+                data: {
+                    firstname,
+                    lastname,
+                    role
+                }
+            }
+        });
+        
+        if (error) throw error;
+        
+        showAuthFeedback("Compte créé avec succès ! Authentification en cours...", "success");
+        if (data.session) {
+            await handleAuthStateChange(data.session);
+        } else {
+            showAuthFeedback("Compte créé ! Veuillez vérifier votre boîte mail si nécessaire.", "success");
+        }
+    } catch (e) {
+        showAuthFeedback(e.message || "Erreur lors de l'inscription.", "error");
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerText = "Créer mon compte";
+    }
+}
+
+async function handleLogin(event) {
+    event.preventDefault();
+    const feedback = document.getElementById("auth-feedback");
+    const submitBtn = document.getElementById("btn-login-submit");
+    
+    if (feedback) feedback.className = "auth-feedback-msg d-none";
+    
+    const email = document.getElementById("login-email").value.trim();
+    const password = document.getElementById("login-password").value;
+    
+    if (!isSupabaseConfigured) {
+        showAuthFeedback("Mode hors ligne actif. Supabase non configuré.", "error");
+        return;
+    }
+    
+    try {
+        submitBtn.disabled = true;
+        submitBtn.innerText = "Connexion...";
+        
+        const { data, error } = await supabase.auth.signInWithPassword({
+            email,
+            password
+        });
+        
+        if (error) throw error;
+        
+        showAuthFeedback("Connexion réussie !", "success");
+        await handleAuthStateChange(data.session);
+    } catch (e) {
+        showAuthFeedback(e.message || "Email ou mot de passe incorrect.", "error");
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerText = "Se connecter";
+    }
+}
+
+async function handleSignOut() {
+    const confirmLogout = confirm("Souhaitez-vous vous déconnecter ?");
+    if (!confirmLogout) return;
+    
+    if (isSupabaseConfigured) {
+        await supabase.auth.signOut();
+    }
+    
+    localStorage.removeItem("maths_firstname");
+    localStorage.removeItem("maths_lastname");
+    localStorage.removeItem("maths_student_progress");
+    localStorage.removeItem("maths_global_score");
+    
+    window.location.reload();
+}
+
+async function resetProfile() {
+    const confirmReset = confirm("Attention ! Vous allez réinitialiser votre progression locale. Si vous êtes connecté, cela réinitialisera aussi vos données cloud. Continuer ?");
     if (confirmReset) {
+        if (isSupabaseConfigured && currentUser) {
+            try {
+                await supabase.from('student_progress').delete().eq('id', currentUser.id);
+                await supabase.auth.signOut();
+            } catch (e) {
+                console.error("Erreur réinitialisation cloud :", e);
+            }
+        }
         localStorage.clear();
         window.location.reload();
+    }
+}
+
+function showAuthFeedback(msg, type) {
+    const feedback = document.getElementById("auth-feedback");
+    if (feedback) {
+        feedback.className = `auth-feedback-msg ${type}`;
+        feedback.innerText = msg;
+        feedback.classList.remove("d-none");
     }
 }
 
@@ -141,7 +481,14 @@ function updateUserUI() {
     const fullname = `${studentProfile.firstname} ${studentProfile.lastname.toUpperCase()}`;
     document.getElementById("user-display-name").innerText = studentProfile.firstname;
     document.getElementById("user-display-name").title = fullname;
-    document.getElementById("welcome-name").innerText = studentProfile.firstname;
+    
+    const welcomeName = document.getElementById("welcome-name");
+    if (welcomeName) welcomeName.innerText = studentProfile.firstname;
+    
+    const roleDisp = document.getElementById("user-display-role");
+    if (roleDisp) {
+        roleDisp.innerText = currentUserRole === "teacher" ? "Professeur" : "Spé Mathématiques";
+    }
 }
 
 function toggleTheme() {
@@ -239,6 +586,13 @@ function switchView(viewName, chapterId = null) {
         if (correctionContainer) {
             correctionContainer.classList.add("d-none");
         }
+    } else if (viewName === 'teacher') {
+        document.getElementById("view-teacher").classList.add("active");
+        document.getElementById("nav-teacher").classList.add("active");
+        pageTitle.innerText = "Espace Enseignant";
+        pageSubtitle.innerText = "Suivi de l'évolution et des résultats des élèves";
+        
+        refreshTeacherData();
     }
 }
 
@@ -283,6 +637,9 @@ function getOverallProgress() {
 function saveProgressToStorage() {
     localStorage.setItem("maths_student_progress", JSON.stringify(userProgress));
     updateSidebarStatusIcons();
+    if (isSupabaseConfigured && currentUser) {
+        saveProgressToCloud();
+    }
 }
 
 function saveChapterScore(chapterId, score) {
@@ -905,4 +1262,344 @@ function toggleCorrectionPDF() {
             container.scrollIntoView({ behavior: 'smooth' });
         }
     }
+}
+
+/* ==========================================================================
+   7. TEACHER DASHBOARD LOGIC (SUPABASE CLOUD QUERY & RENDER)
+   ========================================================================== */
+
+let studentsData = []; // Cache list of students
+let currentSortKey = "lastname";
+let currentSortOrder = "asc";
+
+async function refreshTeacherData() {
+    if (!isSupabaseConfigured || currentUserRole !== "teacher") return;
+    
+    const tbody = document.getElementById("teacher-students-tbody");
+    if (tbody) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="6" style="text-align: center; padding: 30px; color: var(--text-secondary);">
+                    <i class="fa-solid fa-spinner fa-spin" style="margin-right: 8px;"></i> Récupération des données en cours...
+                </td>
+            </tr>
+        `;
+    }
+    
+    try {
+        const { data, error } = await supabase
+            .from('student_progress')
+            .select('*')
+            .order('lastname', { ascending: true });
+            
+        if (error) throw error;
+        
+        studentsData = data.map(item => {
+            // Helper stats
+            const progress = getOverallProgressPercentage(item.progress);
+            const avgQuiz = getAverageQuizScore(item.progress);
+            
+            return {
+                id: item.id,
+                firstname: item.firstname,
+                lastname: item.lastname,
+                progress: progress,
+                avg_quiz: avgQuiz,
+                global_score: item.global_score,
+                updated_at: item.updated_at,
+                rawProgress: item.progress // save for detailed modal view
+            };
+        });
+        
+        updateTeacherStats();
+        renderStudentsTable();
+        
+    } catch (e) {
+        console.error("Erreur de récupération des données enseignants :", e);
+        if (tbody) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="6" style="text-align: center; padding: 30px; color: var(--color-error);">
+                        <i class="fa-solid fa-circle-exclamation" style="margin-right: 8px;"></i> Une erreur est survenue lors du chargement des données.
+                    </td>
+                </tr>
+            `;
+        }
+    }
+}
+
+// Helpers for progress parsing
+function getOverallProgressPercentage(prog) {
+    if (!prog || !prog.chapters) return 0;
+    
+    let totalProgress = 0;
+    const chaptersCount = Object.keys(prog.chapters).length;
+    if (chaptersCount === 0) return 0;
+    
+    Object.keys(prog.chapters).forEach(chId => {
+        const p = prog.chapters[chId];
+        let total = 0;
+        if (p.read) total += 10;
+        
+        if (p.ex1_1) total += 10;
+        if (p.ex1_2) total += 10;
+        if (p.ex1_3) total += 10;
+        
+        if (p.ex2_1) total += 10;
+        if (p.ex2_2) total += 10;
+        if (p.ex2_3) total += 10;
+        
+        if (p.ex3_1) total += 10;
+        if (p.ex3_2) total += 10;
+        if (p.ex3_3) total += 10;
+        
+        totalProgress += total;
+    });
+    
+    return Math.round(totalProgress / chaptersCount);
+}
+
+function getAverageQuizScore(prog) {
+    if (!prog || !prog.chapters) return null;
+    
+    let quizSum = 0;
+    let quizCount = 0;
+    
+    Object.keys(prog.chapters).forEach(chId => {
+        const c = prog.chapters[chId];
+        if (c.quizScore !== null && c.quizScore !== undefined) {
+            quizSum += c.quizScore;
+            quizCount++;
+        }
+    });
+    
+    if (quizCount > 0) {
+        const avgRaw = (quizSum / quizCount) * 4; // Out of 20
+        return Math.round(avgRaw * 10) / 10;
+    }
+    
+    return null;
+}
+
+// Update summary stats cards
+function updateTeacherStats() {
+    document.getElementById("teacher-stat-students-count").innerText = studentsData.length;
+    
+    if (studentsData.length === 0) {
+        document.getElementById("teacher-stat-avg-progress").innerText = "0%";
+        document.getElementById("teacher-stat-avg-score").innerText = "-- / 20";
+        return;
+    }
+    
+    let sumProgress = 0;
+    let sumScore = 0;
+    let scoreCount = 0;
+    
+    studentsData.forEach(s => {
+        sumProgress += s.progress;
+        if (s.global_score !== null && s.global_score !== undefined) {
+            sumScore += s.global_score;
+            scoreCount++;
+        }
+    });
+    
+    const avgProgress = Math.round(sumProgress / studentsData.length);
+    document.getElementById("teacher-stat-avg-progress").innerText = `${avgProgress}%`;
+    
+    const avgScoreContainer = document.getElementById("teacher-stat-avg-score");
+    if (scoreCount > 0) {
+        const avg = Math.round((sumScore / scoreCount) * 10) / 10;
+        avgScoreContainer.innerText = `${avg} / 20`;
+    } else {
+        avgScoreContainer.innerText = "-- / 20";
+    }
+}
+
+// Render the list of students in the table
+function renderStudentsTable(filteredData = null) {
+    const tbody = document.getElementById("teacher-students-tbody");
+    if (!tbody) return;
+    
+    const list = filteredData || studentsData;
+    
+    if (list.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="6" style="text-align: center; padding: 30px; color: var(--text-secondary);">
+                    Aucun élève trouvé.
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    tbody.innerHTML = "";
+    
+    list.forEach(student => {
+        const date = new Date(student.updated_at).toLocaleDateString('fr-FR', {
+            day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
+        });
+        
+        let progressBadge = `<span class="teacher-badge teacher-badge-notstarted">0%</span>`;
+        if (student.progress === 100) {
+            progressBadge = `<span class="teacher-badge teacher-badge-completed"><i class="fa-solid fa-circle-check"></i> 100%</span>`;
+        } else if (student.progress > 0) {
+            progressBadge = `<span class="teacher-badge teacher-badge-progress">${student.progress}%</span>`;
+        }
+        
+        const quizText = student.avg_quiz !== null ? `${student.avg_quiz} / 20` : `-- / 20`;
+        const scoreText = student.global_score !== null ? `<strong>${student.global_score} / 20</strong>` : `<span style="color:var(--text-secondary);">Non passé</span>`;
+        
+        tbody.innerHTML += `
+            <tr style="border-bottom: 1px solid var(--border-color);">
+                <td style="padding: 12px; font-weight: 600;">${student.lastname.toUpperCase()} ${student.firstname}</td>
+                <td style="padding: 12px;">${progressBadge}</td>
+                <td style="padding: 12px;">${quizText}</td>
+                <td style="padding: 12px;">${scoreText}</td>
+                <td style="padding: 12px; font-size: 13px; color: var(--text-secondary);">${date}</td>
+                <td style="padding: 12px;">
+                    <button class="btn btn-outline" style="padding: 4px 10px; font-size: 12px;" onclick="viewStudentDetails('${student.id}')">
+                        Détails
+                    </button>
+                </td>
+            </tr>
+        `;
+    });
+}
+
+// Filter the table based on search input
+function filterStudentsTable() {
+    const searchVal = document.getElementById("teacher-search").value.trim().toLowerCase();
+    if (searchVal === "") {
+        renderStudentsTable();
+        return;
+    }
+    
+    const filtered = studentsData.filter(s => {
+        const full = `${s.firstname} ${s.lastname}`.toLowerCase();
+        return full.includes(searchVal) || s.lastname.toLowerCase().includes(searchVal) || s.firstname.toLowerCase().includes(searchVal);
+    });
+    
+    renderStudentsTable(filtered);
+}
+
+// Sort the table
+function sortStudentsTable(key) {
+    if (currentSortKey === key) {
+        currentSortOrder = currentSortOrder === "asc" ? "desc" : "asc";
+    } else {
+        currentSortKey = key;
+        currentSortOrder = "asc";
+    }
+    
+    studentsData.sort((a, b) => {
+        let valA = a[key];
+        let valB = b[key];
+        
+        // Handle nulls
+        if (valA === null || valA === undefined) return currentSortOrder === "asc" ? 1 : -1;
+        if (valB === null || valB === undefined) return currentSortOrder === "asc" ? -1 : 1;
+        
+        if (typeof valA === 'string') {
+            return currentSortOrder === "asc" ? valA.localeCompare(valB) : valB.localeCompare(valA);
+        } else {
+            return currentSortOrder === "asc" ? valA - valB : valB - valA;
+        }
+    });
+    
+    renderStudentsTable();
+}
+
+// Show detailed modal of a student
+function viewStudentDetails(studentId) {
+    const student = studentsData.find(s => s.id === studentId);
+    if (!student) return;
+    
+    document.getElementById("detail-student-name").innerText = `${student.lastname.toUpperCase()} ${student.firstname}`;
+    document.getElementById("detail-student-email").innerText = `Identifiant ID : ${student.id}`;
+    
+    const container = document.getElementById("detail-student-content");
+    container.innerHTML = "";
+    
+    let chRows = "";
+    
+    CHAPTERS_DATA.forEach(ch => {
+        const progState = student.rawProgress.chapters[ch.id];
+        let progPct = 0;
+        
+        if (progState) {
+            let total = 0;
+            if (progState.read) total += 10;
+            if (progState.ex1_1) total += 10;
+            if (progState.ex1_2) total += 10;
+            if (progState.ex1_3) total += 10;
+            if (progState.ex2_1) total += 10;
+            if (progState.ex2_2) total += 10;
+            if (progState.ex2_3) total += 10;
+            if (progState.ex3_1) total += 10;
+            if (progState.ex3_2) total += 10;
+            if (progState.ex3_3) total += 10;
+            progPct = total;
+        }
+        
+        const qScore = (progState && progState.quizScore !== null) ? `${progState.quizScore} / 5` : `<span style="color:var(--text-secondary);">Non fait</span>`;
+        
+        const exCheck = (exVal) => exVal ? `<i class="fa-solid fa-circle-check text-success" style="font-size:12px;"></i>` : `<i class="fa-regular fa-circle text-muted" style="font-size:12px;"></i>`;
+        
+        chRows += `
+            <div style="border: 1px solid var(--border-color); border-radius: var(--border-radius-sm); padding: 14px; margin-bottom: 12px; background-color: var(--bg-app);">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+                    <strong style="font-size: 13.5px;">Module 0${ch.id} — ${ch.title}</strong>
+                    <span class="teacher-badge ${progPct === 100 ? 'teacher-badge-completed' : (progPct > 0 ? 'teacher-badge-progress' : 'teacher-badge-notstarted')}">${progPct}%</span>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 12.5px;">
+                    <div>
+                        <div>Cours lu : ${progState && progState.read ? '✔ Oui' : '❌ Non'}</div>
+                        <div style="margin-top: 4px;">Quiz de chapitre : <strong>${qScore}</strong></div>
+                    </div>
+                    <div>
+                        <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
+                            <span>Niv 1 :</span>
+                            <span>${exCheck(progState && progState.ex1_1)} ${exCheck(progState && progState.ex1_2)} ${exCheck(progState && progState.ex1_3)}</span>
+                        </div>
+                        <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin-top: 4px;">
+                            <span>Niv 2 :</span>
+                            <span>${exCheck(progState && progState.ex2_1)} ${exCheck(progState && progState.ex2_2)} ${exCheck(progState && progState.ex2_3)}</span>
+                        </div>
+                        <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin-top: 4px;">
+                            <span>Niv 3 :</span>
+                            <span>${exCheck(progState && progState.ex3_1)} ${exCheck(progState && progState.ex3_2)} ${exCheck(progState && progState.ex3_3)}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = `
+        <div class="stats-grid" style="margin-bottom: 20px; grid-template-columns: 1fr 1fr;">
+            <div class="stat-card" style="padding: 14px;">
+                <div class="stat-details">
+                    <span class="stat-value" style="font-size: 20px;">${student.progress}%</span>
+                    <span class="stat-label" style="font-size: 11px;">Progression totale</span>
+                </div>
+            </div>
+            <div class="stat-card" style="padding: 14px;">
+                <div class="stat-details">
+                    <span class="stat-value" style="font-size: 20px;">${student.global_score !== null ? student.global_score + ' / 20' : 'Non validée'}</span>
+                    <span class="stat-label" style="font-size: 11px;">Évaluation finale</span>
+                </div>
+            </div>
+        </div>
+        
+        <h4 style="margin-top: 16px; margin-bottom: 12px; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;">Détail par module</h4>
+        ${chRows}
+    `;
+    
+    document.getElementById("student-detail-modal").classList.add("active");
+}
+
+function closeStudentDetailModal() {
+    document.getElementById("student-detail-modal").classList.remove("active");
 }
