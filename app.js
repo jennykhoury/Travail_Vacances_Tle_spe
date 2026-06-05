@@ -4,7 +4,7 @@
  */
 
 // SUPABASE CONFIGURATION
-const SUPABASE_URL = "https://llapoxnwtyshzorsmfaw.supabase.co/rest/v1/";
+const SUPABASE_URL = "sb_publishable__11gODn3mDH_8Z8Zr9Slyg_ZmR5Mkae";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxsYXBveG53dHlzaHpvcnNtZmF3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NjQ3ODYsImV4cCI6MjA5NjI0MDc4Nn0.xzpPYCIgUWaCVK8daovtdWaA0D4RnEaINwINso4MW8s";
 const TEACHER_ACCESS_CODE = "jennykhoury";
 
