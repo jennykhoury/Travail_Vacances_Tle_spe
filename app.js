@@ -8,12 +8,12 @@ const SUPABASE_URL = "https://llapoxnwtyshzorsmfaw.supabase.co/rest/v1/";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxsYXBveG53dHlzaHpvcnNtZmF3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2NjQ3ODYsImV4cCI6MjA5NjI0MDc4Nn0.xzpPYCIgUWaCVK8daovtdWaA0D4RnEaINwINso4MW8s";
 const TEACHER_ACCESS_CODE = "jennykhoury";
 
-let supabase = null;
+let supabaseClient = null;
 let isSupabaseConfigured = false;
 
 if (typeof window.supabase !== 'undefined' && SUPABASE_URL !== "YOUR_SUPABASE_URL" && SUPABASE_ANON_KEY !== "YOUR_SUPABASE_ANON_KEY") {
     try {
-        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         isSupabaseConfigured = true;
         console.log("Supabase initialisé avec succès !");
     } catch (e) {
@@ -73,7 +73,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (isSupabaseConfigured) {
         // Setup authentication listener
-        supabase.auth.onAuthStateChange(async (event, session) => {
+        supabaseClient.auth.onAuthStateChange(async (event, session) => {
             console.log("Supabase Auth Event:", event);
             await handleAuthStateChange(session);
         });
@@ -203,7 +203,7 @@ async function loadProgressFromCloud() {
             cloudIcon.title = "Synchronisation...";
         }
         
-        const { data, error } = await supabase
+        const { data, error } = await supabaseClient
             .from('student_progress')
             .select('*')
             .eq('id', currentUser.id)
@@ -253,7 +253,7 @@ async function saveProgressToCloud() {
             cloudIcon.title = "Synchronisation...";
         }
         
-        const { error } = await supabase
+        const { error } = await supabaseClient
             .from('student_progress')
             .upsert({
                 id: currentUser.id,
@@ -372,7 +372,7 @@ async function handleSignup(event) {
         submitBtn.disabled = true;
         submitBtn.innerText = "Création du compte...";
         
-        const { data, error } = await supabase.auth.signUp({
+        const { data, error } = await supabaseClient.auth.signUp({
             email,
             password,
             options: {
@@ -419,7 +419,7 @@ async function handleLogin(event) {
         submitBtn.disabled = true;
         submitBtn.innerText = "Connexion...";
         
-        const { data, error } = await supabase.auth.signInWithPassword({
+        const { data, error } = await supabaseClient.auth.signInWithPassword({
             email,
             password
         });
@@ -441,7 +441,7 @@ async function handleSignOut() {
     if (!confirmLogout) return;
     
     if (isSupabaseConfigured) {
-        await supabase.auth.signOut();
+        await supabaseClient.auth.signOut();
     }
     
     localStorage.removeItem("maths_firstname");
@@ -457,8 +457,8 @@ async function resetProfile() {
     if (confirmReset) {
         if (isSupabaseConfigured && currentUser) {
             try {
-                await supabase.from('student_progress').delete().eq('id', currentUser.id);
-                await supabase.auth.signOut();
+                await supabaseClient.from('student_progress').delete().eq('id', currentUser.id);
+                await supabaseClient.auth.signOut();
             } catch (e) {
                 console.error("Erreur réinitialisation cloud :", e);
             }
@@ -1287,7 +1287,7 @@ async function refreshTeacherData() {
     }
     
     try {
-        const { data, error } = await supabase
+        const { data, error } = await supabaseClient
             .from('student_progress')
             .select('*')
             .order('lastname', { ascending: true });
